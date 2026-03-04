@@ -1010,6 +1010,9 @@ function openFullscreenMap(itemName, targetUrl, scrapedItems) {
     };
 
     mapImg.src = currentImageSrc;
+
+
+    
 }
 
 
@@ -1248,4 +1251,70 @@ if (coffeeBtn) {
     coffeeBtn.addEventListener('click', () => {
         window.open('https://ko-fi.com/jonathanwenell', '_blank');
     });
+}
+
+
+// ==========================================
+// --- KARTA: ZOOM OCH PANORERING (MOBIL) ---
+// ==========================================
+
+const touchMapImg = document.getElementById('modalMapImage');
+const touchMapContainer = document.getElementById('mapScrollContainer');
+
+let mapScale = 1;
+let mapTranslateX = 0;
+let mapTranslateY = 0;
+let mapStartX = 0;
+let mapStartY = 0;
+let mapStartDist = 0;
+let mapInitialScale = 1;
+
+window.resetMapZoom = function() {
+    mapScale = 1;
+    mapTranslateX = 0;
+    mapTranslateY = 0;
+    if (touchMapImg) {
+        touchMapImg.style.transform = `translate(0px, 0px) scale(1)`;
+    }
+};
+
+if (touchMapContainer && touchMapImg) {
+    touchMapContainer.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+            mapStartDist = Math.hypot(
+                e.touches[0].pageX - e.touches[1].pageX,
+                e.touches[0].pageY - e.touches[1].pageY
+            );
+            mapInitialScale = mapScale;
+        } else if (e.touches.length === 1) {
+            mapStartX = e.touches[0].pageX - mapTranslateX;
+            mapStartY = e.touches[0].pageY - mapTranslateY;
+        }
+    }, { passive: false });
+
+    touchMapContainer.addEventListener('touchmove', (e) => {
+        // Kör bara touch-zoom om vi faktiskt ser kartan (så dropdowns inte påverkas)
+        if (document.getElementById('mapModal').classList.contains('hidden')) return;
+        
+        e.preventDefault(); 
+
+        if (e.touches.length === 2) {
+            const currentDistance = Math.hypot(
+                e.touches[0].pageX - e.touches[1].pageX,
+                e.touches[0].pageY - e.touches[1].pageY
+            );
+            const zoomFactor = currentDistance / mapStartDist;
+            mapScale = Math.min(Math.max(1, mapInitialScale * zoomFactor), 4); 
+            
+            if (mapScale === 1) {
+                mapTranslateX = 0;
+                mapTranslateY = 0;
+            }
+        } else if (e.touches.length === 1 && mapScale > 1) {
+            mapTranslateX = e.touches[0].pageX - mapStartX;
+            mapTranslateY = e.touches[0].pageY - mapStartY;
+        }
+
+        touchMapImg.style.transform = `translate(${mapTranslateX}px, ${mapTranslateY}px) scale(${mapScale})`;
+    }, { passive: false });
 }

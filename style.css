@@ -580,7 +580,8 @@ details ul, .lift-list {
 .lift-list li {
     display: flex;
     justify-content: space-between;
-    padding: 8px 0;
+    /* Ändrad från "8px 0" till "10px 16px" för att ge luft på vänster/höger sida */
+    padding: 10px 16px; 
     border-bottom: 1px solid #f7fafc;
     font-size: 14px;
     color: #4a5568;
@@ -604,23 +605,36 @@ details ul, .lift-list {
 
 /* Slot som håller alla ikoner centrerade i rad */
 .icon-slot {
-    display: flex;
-    justify-content: center; 
-    align-items: center;
-    width: 32px; 
-    min-width: 32px;
-    margin-right: 12px; 
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    
+    /* MAGIN: Tvingar lådan att alltid vara exakt 36px bred och krymper aldrig */
+    flex: 0 0 36px !important; 
+    width: 36px !important;
+    max-width: 36px !important;
+    height: 36px !important;
+    margin-right: 12px !important; 
 }
+
+.icon-slot img,
+.icon-slot .lift-icon-img,
+.icon-slot .park-icon-img {
+    max-width: 24px !important;  /* Något mindre ikoner för en renare look */
+    max-height: 24px !important;
+    object-fit: contain !important;
+    margin: 0 !important;
+}
+
 
 /* Nollställer gamla marginaler så .icon-slot kan ta över */
 .header-icon, 
 .lift-icon-img, 
 .park-icon-img, 
 .difficulty-icon {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    display: block !important;
+    margin: 0 !important; 
 }
-
 /* Bilder för liftar och parker */
 .lift-icon-img {
     height: 28px; 
@@ -648,6 +662,7 @@ details ul, .lift-list {
     width: 12px;
     height: 12px;
     vertical-align: middle;
+    margin: 0 auto;
 }
 
 .icon-very-easy {
@@ -736,7 +751,17 @@ details ul, .lift-list {
     border-radius: 12px;
     touch-action: none;
     overscroll-behavior: contain;
+    align-items: center;
 }
+
+#fullscreenMapImage {
+    transform-origin: center center; /* Zoomar från mitten */
+    transition: transform 0.05s linear; /* Gör dragandet supersmidigt */
+    max-width: 100%;
+    max-height: 100vh;
+    object-fit: contain;
+}
+
 
 .map-scroll-container:active {
     cursor: grabbing; 

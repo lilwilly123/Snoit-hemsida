@@ -961,3 +961,19 @@ details ul, .lift-list {
         font-size: 15px;
     }
 }
+
+@media (hover: hover) {
+    .tab-btn:hover {
+        color: #1e293b;
+        background-color: #f1f5f9; /* Ljusgrå bakgrund vid hovring på dator */
+        border-radius: 8px 8px 0 0;
+    }
+}
+
+/* --- STIL FÖR VALD FLIK (Hundfjället etc) --- */
+.tab-btn.active {
+    color: #48A6A7 !important;     /* Din snygga teal-färg */
+    border-bottom: 3px solid #48A6A7; /* Tydligt streck under vald flik */
+    background-color: transparent; /* Ingen "lysande" bakgrund här */
+    font-weight: 800;              /* Gör texten extra fet */
+}

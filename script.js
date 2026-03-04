@@ -719,33 +719,46 @@ async function fetchSkistarLifts(targetUrl) {
 
 async function fetchSkistarMainPage(simpleViewUrl) {
     const cacheKey = `main_page_${simpleViewUrl}`;
+    
+    // 1. VISA CACHE DIREKT (Snabb-respons)
+    const quickCache = getFromCache(cacheKey);
+    if (quickCache) {
+        console.log("Visar snabb-cache medan servern vaknar...");
+        renderDataToUI(quickCache.content); 
+    }
+
     const mainUrl = simpleViewUrl.replace("SimpleView/", "");
     const localServerUrl = `${SERVER_BASE_URL}/scrape?url=${encodeURIComponent(mainUrl)}`;
     
+    // 2. TIMEOUT-LOGIK (Vänta max 2 sekunder på Render)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); 
+
     try {
         const response = await fetch(localServerUrl, {
-            headers: { 'x-api-key': 'DittHemligaLösenord123' }
+            headers: { 'x-api-key': 'DittHemligaLösenord123' },
+            signal: controller.signal // Kopplar timeouten hit
         });
+        clearTimeout(timeoutId); // Avbryt timeout om vi fick svar i tid
+        
         const htmlData = await response.text();
         
-        // Städa HTML-koden för att enklare kunna söka efter texten med Regex
+        // Städa HTML-koden
         const cleanText = htmlData.replace(/<[^>]+>/g, ' ')
                                   .replace(/&deg;/ig, '°')
                                   .replace(/&nbsp;/ig, ' ')
                                   .replace(/\s+/g, ' ');
 
-        // Extrahera snödjup i terräng och pist
+        // Extrahera data med Regex
         const terrangMatch = cleanText.match(/Terräng\s*(\d+)\s*cm/i);
         const snowStr = terrangMatch ? `${terrangMatch[1]} <span class="unit">cm</span>` : "...";
         
         const pistMatch = cleanText.match(/Pist\s*(\d+)\s*cm/i);
         const pisteStr = pistMatch ? `${pistMatch[1]} <span class="unit">cm</span>` : "...";
 
-        // Extrahera öppettider
         const oppettiderMatch = cleanText.match(/(\d{2}:\d{2}\s*[-–]\s*\d{2}:\d{2})/);
         const hoursStr = oppettiderMatch ? oppettiderMatch[1].replace(/\s+/g, '') : "-";
 
-        // Extrahera temperaturer
         const temps = [...cleanText.matchAll(/(-?\d+(?:[.,]\d+)?)\s*°/g)];
         let tTop = "-", tValley = "-";
         if (temps.length >= 2) {
@@ -753,7 +766,6 @@ async function fetchSkistarMainPage(simpleViewUrl) {
             tValley = temps[1][1].replace('.', ',') + "°";
         }
 
-        // Extrahera vindstyrkor
         const allWindsMatches = [...cleanText.matchAll(/(vindbyar|byar)?\s*(\d+)\s*m\s*\/\s*s/ig)];
         const averageWinds = allWindsMatches.filter(m => !m[1]).map(m => m[2]);
         let wTop = "", wValley = "";
@@ -762,60 +774,51 @@ async function fetchSkistarMainPage(simpleViewUrl) {
             wValley = averageWinds[1] + " m/s";
         }
 
-
-        
-
-        // --- NY LOGIK FÖR ATT STAPLA KLOCKSLAG ---
+        // Formatera klockslag för stapling
         let formattedTime = hoursStr;
         if (hoursStr !== "-") {
-            // Vi splittar vid strecket (hanterar både vanligt - och långt – streck)
             const timeParts = hoursStr.split(/[-–]/); 
             if (timeParts.length === 2) {
                 formattedTime = `<span>${timeParts[0]}</span><span class="time-sep">-</span><span>${timeParts[1]}</span>`;
             }
         }
 
-        // Uppdatera UI - kom ihåg "true" på slutet för att tillåta <span>
-        updateText('snowDepth', snowStr, true);
-        updateText('pisteDepth', pisteStr, true);
-        updateText('openHours', formattedTime, true); // <-- Ändrad här
-        updateText('topTemp', tTop);
-        updateText('valleyTemp', tValley);
-        updateText('topWind', wTop);
-        updateText('valleyWind', wValley);
-
-        // Spara skrapad data till cachen ifall servern skulle ligga nere nästa gång
-        saveToCache(cacheKey, {
+        // 3. SKAPA OBJEKT FÖR UI OCH CACHE
+        const freshData = {
             snow: snowStr,
             piste: pisteStr,
-            hours: hoursStr,
+            hours: formattedTime, // Sparar den formaterade HTML:en
+            rawHours: hoursStr,   // Sparar rådata för säkerhet
             topTemp: tTop,
             valleyTemp: tValley,
             topWind: wTop,
             valleyWind: wValley
-        });
+        };
+
+        // Uppdatera UI med färsk data
+        renderDataToUI(freshData);
+
+        // Spara till cachen
+        saveToCache(cacheKey, freshData);
 
     } catch (error) {
-        console.error("Serverfel, hämtar från cache:", error);
-        
-        const cached = getFromCache(cacheKey);
-        if (cached) {
-            // Här hämtar vi exakt de variabler vi sparade i saveToCache ovan
-            const c = cached.content; 
-            
-            updateText('snowDepth', c.snow + " (Cache)", true);
-            updateText('pisteDepth', c.piste, true);
-            updateText('openHours', c.hours, true);
-            updateText('topTemp', c.topTemp);
-            updateText('valleyTemp', c.valleyTemp);
-            updateText('topWind', c.topWind);
-            updateText('valleyWind', c.valleyWind);
-            
-            console.log("Visar sparad snödata från:", cached.timestamp);
-        } else {
+        console.log("Servern sover eller nätverksfel. Cachen används.");
+        // Om vi inte har någon cache alls (första gången man besöker sidan)
+        if (!quickCache) {
             updateText('snowDepth', "Offline");
         }
     }
+}
+
+// HJÄLPFUNKTION: Uppdaterar alla fält i gränssnittet
+function renderDataToUI(c) {
+    updateText('snowDepth', c.snow, true);
+    updateText('pisteDepth', c.piste, true);
+    updateText('openHours', c.hours, true);
+    updateText('topTemp', c.topTemp);
+    updateText('valleyTemp', c.valleyTemp);
+    updateText('topWind', c.topWind);
+    updateText('valleyWind', c.valleyWind);
 }
 
 

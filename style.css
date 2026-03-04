@@ -364,11 +364,32 @@ select {
     border: 1px solid #E2E8F0;
 }
 
-.data-container {
-    display: flex;
-    justify-content: space-between;
-    margin: 20px 0;
+.data-container, 
+.weather-dashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr; /* 3 exakt lika breda kolumner */
+    gap: 15px;                          /* Mellanrum mellan kolumner/boxar */
+    text-align: center;
+    margin-top: 25px;                   /* Mer luft mellan övre och undre avdelning */
+    align-items: stretch;               /* Gör boxarna lika höga per rad */
 }
+
+.weather-dashboard .weather-item {
+    background-color: #fff;              /* Vit bakgrund i boxarna */
+    border: 1px solid #edf2f7;          /* Ljusgrå ram runt varje box */
+    border-radius: 12px;                /* Rundade hörn för en mjukare look */
+    padding: 15px 10px;                 /* Inre luft i boxen */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;             /* Centrerar innehållet vertikalt i boxen */
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Subtil skugga för att "lyfta" boxen */
+}
+
+.weather-dashboard .weather-item:nth-child(2) {
+    background-color: #f7fafc;          /* Något mörkare bakgrund på mittboxen */
+}
+
 
 .data-block { 
     display: flex; 
@@ -383,31 +404,38 @@ select {
     margin-bottom: 5px; 
 }
 
-.depth { 
-    font-size: 28px; 
-    font-weight: 800; 
-    color: #1e293b; 
+/* --- TEXTSTORLEKAR INUTI BOXARNA --- */
+.depth {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-weight: 800;
+    font-size: 26px;
+    line-height: 1;
 }
+
+#openHours {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-weight: 800;
+    font-size: 20px; /* Justerad för balans */
+    color: #ed8936;
+    line-height: 1.1;
+}
+
+.unit, .time-sep { font-size: 14px; margin-top: 2px; }
 
 .piste-color { 
     color: #48A6A7; 
 }
 
-/* Väder-modulen ("Dashboard") */
-.weather-dashboard {
-    display: flex;
-    justify-content: space-between;
-    background: white;
-    padding: 15px;
-    border-radius: 16px;
-    border: 1px solid #E2E8F0;
-}
-
 .weather-item {
+    border: none !important;
+    padding: 0 !important;
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 30%;
 }
 
 .weather-emoji {
@@ -706,6 +734,8 @@ details ul, .lift-list {
     background: #F2EFE7;
     cursor: grab;
     border-radius: 12px;
+    touch-action: none;
+    overscroll-behavior: contain;
 }
 
 .map-scroll-container:active {
@@ -879,4 +909,55 @@ details ul, .lift-list {
 }
 #subAreaList {
     z-index: 1000;
+}
+
+/* Justeringar för de allra minsta telefonerna */
+@media (max-width: 440px) {
+    .container {
+        padding: 10px;
+    }
+
+    /* Tabs-behållaren */
+    .tabs-wrapper {
+        justify-content: flex-start;
+        gap: 6px; /* Minimalt mellanrum */
+        padding-bottom: 4px;
+        overflow-x: auto;
+    }
+
+    /* Flik-knapparna */
+    .tab-btn {
+        /* MAGIN: 47% gör att två får plats (47+47 = 94%) plus lite gap */
+        flex: 0 0 47%; 
+        padding: 8px 2px; /* Minimal padding på sidorna */
+        font-size: 12px;   /* Lite mindre text för att rymma långa namn som "Högfjället" */
+        min-width: 0;      /* Tar bort tidigare 80px-gräns */
+        
+        /* Om ett namn är extremt långt klipper vi det snyggt med ... */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+
+    .data-container, 
+    .weather-dashboard { gap: 10px; } /* Tätare på små skärmar */
+
+    .depth { font-size: 20px; }
+    #openHours { font-size: 16px; }
+    
+    .label { font-size: 10px; margin-bottom: 5px; }
+
+    .unit, .time-sep {
+        font: inherit;
+        font-weight: 800;
+        font-size: 0.8em;
+        color: inherit;
+    }
+
+    .weather-dashboard .weather-item { padding: 10px 5px; } /* Mindre inre luft i boxarna */
+    
+    .weather-value {
+        font-size: 15px;
+    }
 }

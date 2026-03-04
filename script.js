@@ -38,11 +38,13 @@ function getFromCache(key) {
 }
 
 // Allmän hjälpfunktion för att säkert uppdatera text i ett HTML-element
-function updateText(id, text) {
+function updateText(id, text, isHtml = false) {
     const el = document.getElementById(id);
-    if (el) el.innerText = text;
+    if (el) {
+        if (isHtml) el.innerHTML = text; 
+        else el.innerText = text;
+    }
 }
-
 
 // ==========================================
 // --- UI-RENDERING: FLIKAR OCH VÄDER ---
@@ -71,6 +73,7 @@ function renderSubAreaTabs(subAreas) {
             const allTabs = tabsContainer.querySelectorAll('.tab-btn');
             allTabs.forEach(t => t.classList.remove('is-active'));
             button.classList.add('is-active');
+            button.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
 
             // Trigga en ny sökning automatiskt för det valda området
             document.getElementById('searchBtn').click();
@@ -84,10 +87,10 @@ function renderSubAreaTabs(subAreas) {
 function renderWeatherData(data, isOffline = false, timestamp = null) {
     let depthCm = Math.round((data.current.snow_depth || 0) * 100);
     
-    updateText('snowDepth', depthCm + " cm");
-    updateText('labelSnow', "Terräng (Väder)");
-    updateText('pisteDepth', "~" + (depthCm + 45) + " cm"); // Gissning för pistdjup
-    updateText('labelPiste', "Pist (Gissning)");
+    updateText('snowDepth', `${depthCm}<span class="unit">cm</span>`, true);
+    updateText('labelSnow', "Terräng");
+    updateText('pisteDepth', `~${depthCm + 45}<span class="unit">cm</span>`, true);
+    updateText('labelPiste', "Pist");
     updateText('weatherIcon', getWeatherEmoji(data.current.weather_code));
     
     // Visar om datan är live eller hämtad från cache (offline-läge)
@@ -100,8 +103,8 @@ function renderWeatherData(data, isOffline = false, timestamp = null) {
 
     updateText('valleyTemp', data.current.temperature_2m + "°");
     updateText('valleyWind', Math.round(data.current.wind_speed_10m) + " m/s");
-    updateText('valleyLabel', "Dal (Prognos)");
-    updateText('topLabel', "Topp (Saknas)");
+    updateText('valleyLabel', "Dal");
+    updateText('topLabel', "Topp");
 }
 
 
@@ -733,10 +736,10 @@ async function fetchSkistarMainPage(simpleViewUrl) {
 
         // Extrahera snödjup i terräng och pist
         const terrangMatch = cleanText.match(/Terräng\s*(\d+)\s*cm/i);
-        const snowStr = terrangMatch ? terrangMatch[1] + " cm" : "...";
+        const snowStr = terrangMatch ? `${terrangMatch[1]} <span class="unit">cm</span>` : "...";
         
         const pistMatch = cleanText.match(/Pist\s*(\d+)\s*cm/i);
-        const pisteStr = pistMatch ? pistMatch[1] + " cm" : "...";
+        const pisteStr = pistMatch ? `${pistMatch[1]} <span class="unit">cm</span>` : "...";
 
         // Extrahera öppettider
         const oppettiderMatch = cleanText.match(/(\d{2}:\d{2}\s*[-–]\s*\d{2}:\d{2})/);
@@ -759,10 +762,23 @@ async function fetchSkistarMainPage(simpleViewUrl) {
             wValley = averageWinds[1] + " m/s";
         }
 
-        // Uppdatera UI
-        updateText('snowDepth', snowStr);
-        updateText('pisteDepth', pisteStr);
-        updateText('openHours', hoursStr);
+
+        
+
+        // --- NY LOGIK FÖR ATT STAPLA KLOCKSLAG ---
+        let formattedTime = hoursStr;
+        if (hoursStr !== "-") {
+            // Vi splittar vid strecket (hanterar både vanligt - och långt – streck)
+            const timeParts = hoursStr.split(/[-–]/); 
+            if (timeParts.length === 2) {
+                formattedTime = `<span>${timeParts[0]}</span><span class="time-sep">-</span><span>${timeParts[1]}</span>`;
+            }
+        }
+
+        // Uppdatera UI - kom ihåg "true" på slutet för att tillåta <span>
+        updateText('snowDepth', snowStr, true);
+        updateText('pisteDepth', pisteStr, true);
+        updateText('openHours', formattedTime, true); // <-- Ändrad här
         updateText('topTemp', tTop);
         updateText('valleyTemp', tValley);
         updateText('topWind', wTop);
@@ -828,6 +844,7 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
     const introBox = document.querySelector('.intro-info-box');
     if (introBox) introBox.style.display = 'none';
     
+
     updateText('cityName', currentName);
     updateText('openHours', "-");
     updateText('topTemp', "-");
@@ -906,7 +923,7 @@ function openFullscreenMap(itemName, targetUrl, scrapedItems) {
         currentImageSrc = "pics/orter/salen_tandadalen.webp";
     }
 
-    if (!currentImageSrc) return alert("Karta saknas för denna ort för tillfället.");
+    if (!currentImageSrc) return; // Avbryter tyst om ingen bild finns
 
     // Försök hitta den specifika liften/backens koordinater
     const mappedItem = currentMapData.find(m => {
